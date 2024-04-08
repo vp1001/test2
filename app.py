@@ -4,6 +4,7 @@ from flask import make_response
 from functools import wraps
 import pandas as pd
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 # This dictionary stores username-password pairs (you need to define this)
@@ -11,6 +12,9 @@ users = {
     'user1': 'password1',
     'user2': 'password2'
 }
+
+UPLOAD_FOLDER = 'upload'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def check_auth(username, password):
     user_hash = users.get(username)
@@ -29,9 +33,16 @@ def requires_auth(f):
             return response
         return f(*args, **kwargs)
     return decorated
+'''
+def read_excel_data(sheet_number):
+    data = pd.read_excel("NationalCamogieLeague.xlsx", sheet_number)
+    return data
+'''
 
 def read_excel_data(sheet_number):
-    data = pd.read_excel("upload\\NationalCamogieLeague.xlsx", sheet_number)
+    # Adjusting the file path to read from the 'uploads' folder
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], "NationalCamogieLeague.xlsx")
+    data = pd.read_excel(file_path, sheet_number)
     return data
 
 def render_data_template(sheet_number):
@@ -69,9 +80,9 @@ def upload_file():
         return redirect(request.url)
 
     if file:
-        filename = file.filename
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        print(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
         print("Success")
         return redirect(url_for('data_table_1A'))
 
@@ -141,7 +152,5 @@ def data_table_3B():
 def data_json_3B():
     data = read_excel_data(5)
     return render_template('data.html', data=data.to_json())
-
-
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port = "10000")
